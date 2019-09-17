@@ -1,0 +1,16 @@
+[package]
+name = "interval_bakeoff"
+version = "0.1.0"
+authors = ["Seth Stadick <seth_stadick@bio-rad.com>"]
+edition = "2018"
+
+[dependencies]
+clap = "2.33.0"
+rand = "0.7"
+cpu-time = "0.1.0"
+# nested_intervals hasn't had a build pushed yet that doesn't require unstable
+nested_intervals = {path = "../nested_intervals"}
+#nested_intervals = "0.2.0"
+bio = "0.28.2"
+coitree = {path = "../coitree"}
+rust-lapper = "0.3.9"
