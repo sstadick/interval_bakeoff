@@ -1,0 +1,39 @@
+Config for fake run:
+num_intervals	50000
+universe_size	100000
+min_interval_size	500
+max_interval_size	80000
+add_large_span	true
+save_sets	None
+libs	[
+    RustLapper,
+    AIList,
+    RustHopper,
+    RustBio,
+    NestedInterval,
+]
+rust-lapper
+rust-lapper: Time to create set a: 0ns
+rust-lapper: Time to create set b: 15.625ms
+rust-lapper: 100% hit rate A vs A time/count: 5.21875s/1478129579
+rust-lapper: < 100% hit rate A vs B time/count: 546.875ms/174366145
+AIList
+AIList: Time to create set a: 15.625ms
+AIList: Time to create set b: 15.625ms
+AIList: 100% hit rate A vs A time/count: 5.78125s/1478129579
+AIList: < 100% hit rate A vs B time/count: 656.25ms/174366145
+rust-hopper
+rust-hopper: Time to create set a: 0ns
+rust-hopper: Time to create set b: 15.625ms
+rust-hopper: 100% hit rate A vs A time/count: 7.8125s/1478129579
+rust-hopper: < 100% hit rate A vs B time/count: 890.625ms/174366145
+rust-bio
+rust-bio: Time to create set a: 31.25ms
+rust-bio: Time to create set b: 31.25ms
+rust-bio: 100% hit rate A vs A time/count: 40.34375s/1478129579
+rust-bio: < 100% hit rate A vs B time/count: 4.140625s/174366145
+nested-intervals
+nested-intervals: Time to create set a: 15.625ms
+nested-intervals: Time to create set b: 0ns
+nested-intervals: 100% hit rate A vs A time/count: 110.171875s/1478129579
+nested_intervals: < 100% hit rate A vs B time/count: 15.390625s/196827024

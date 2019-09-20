@@ -5,8 +5,10 @@ use bio::data_structures::interval_tree::IntervalTree;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use coitree::{COITree, IntervalNode};
 use cpu_time::ProcessTime;
+use iproxy::{self};
 use nested_intervals::IntervalSet;
 use rand::Rng;
+use rust_hopper::{self};
 use rust_lapper::{Interval, Lapper};
 use std::ops::Range;
 use std::time::Duration;
@@ -15,7 +17,9 @@ arg_enum! {
     #[derive(PartialEq, Debug)]
     pub enum Lib {
         RustLapper,
+        RustHopper,
         RustBio,
+        IProxy,
         NestedInterval,
         COITree,
         AIList,
@@ -156,13 +160,17 @@ fn run_fake(matches: &ArgMatches) {
     for lib in libs {
         match lib {
             Lib::RustLapper => run_rust_lapper(&set_a, &set_b),
+            Lib::RustHopper => run_rust_hopper(&set_a, &set_b),
             Lib::RustBio => run_rust_bio(&set_a, &set_b),
+            Lib::IProxy => run_iproxy(&set_a, &set_b),
             Lib::NestedInterval => run_nested_intervals(&set_a, &set_b),
             Lib::COITree => run_coitree(&set_a, &set_b),
             Lib::AIList => run_ailist(&set_a, &set_b),
             Lib::All => {
                 run_rust_lapper(&set_a, &set_b);
+                run_rust_hopper(&set_a, &set_b);
                 run_rust_bio(&set_a, &set_b);
+                run_iproxy(&set_a, &set_b);
                 run_nested_intervals(&set_a, &set_b);
                 run_coitree(&set_a, &set_b);
                 run_ailist(&set_a, &set_b);
@@ -183,16 +191,16 @@ fn run_rust_lapper(set_a: &Vec<Iv>, set_b: &Vec<Iv>) {
     let set_a_intervals = set_a
         .iter()
         .map(|i| Interval {
-            start: i.start as usize,
-            stop: i.stop as usize,
+            start: i.start,
+            stop: i.stop,
             val: 0,
         })
         .collect();
     let set_b_intervals = set_b
         .iter()
         .map(|i| Interval {
-            start: i.start as usize,
-            stop: i.stop as usize,
+            start: i.start,
+            stop: i.stop,
             val: 0,
         })
         .collect();
@@ -206,17 +214,93 @@ fn run_rust_lapper(set_a: &Vec<Iv>, set_b: &Vec<Iv>) {
     let elapsed: Duration = start.elapsed();
     println!("rust-lapper: Time to create set b: {:#?}", elapsed);
 
+    // Run A vs A - find
+    let start = ProcessTime::now();
+    let mut count = 0;
+    for interval in set_a.iter() {
+        count += lapper_a.find(interval.start, interval.stop).count();
+    }
+    let elapsed: Duration = start.elapsed();
+    println!(
+        "rust-lapper: find 100% hit rate A vs A time/count: {:#?}/{}",
+        elapsed, count
+    );
+    // Run A vs A - count
+    let start = ProcessTime::now();
+    let mut count = 0;
+    for interval in set_a.iter() {
+        count += lapper_a.count(interval.start, interval.stop);
+    }
+    let elapsed: Duration = start.elapsed();
+    println!(
+        "rust-lapper: count 100% hit rate A vs A time/count: {:#?}/{}",
+        elapsed, count
+    );
+
+    // Run A vs B - find
+    let start = ProcessTime::now();
+    let mut count = 0;
+    for interval in set_a.iter() {
+        count += lapper_b.find(interval.start, interval.stop).count();
+    }
+    let elapsed: Duration = start.elapsed();
+    println!(
+        "rust-lapper: find < 100% hit rate A vs B time/count: {:#?}/{}",
+        elapsed, count
+    );
+
+    // Run A vs B - count
+    let start = ProcessTime::now();
+    let mut count = 0;
+    for interval in set_a.iter() {
+        count += lapper_b.count(interval.start, interval.stop);
+    }
+    let elapsed: Duration = start.elapsed();
+    println!(
+        "rust-lapper: count < 100% hit rate A vs B time/count: {:#?}/{}",
+        elapsed, count
+    );
+}
+
+fn run_rust_hopper(set_a: &Vec<Iv>, set_b: &Vec<Iv>) {
+    println!("rust-hopper");
+    let set_a_intervals = set_a
+        .iter()
+        .map(|i| rust_hopper::Interval {
+            start: i.start as usize,
+            stop: i.stop as usize,
+            val: 0,
+        })
+        .collect();
+    let set_b_intervals = set_b
+        .iter()
+        .map(|i| rust_hopper::Interval {
+            start: i.start as usize,
+            stop: i.stop as usize,
+            val: 0,
+        })
+        .collect();
+    // Object Creation
+    let start = ProcessTime::now();
+    let hopper_a = rust_hopper::Hopper::new(set_a_intervals);
+    let elapsed: Duration = start.elapsed();
+    println!("rust-hopper: Time to create set a: {:#?}", elapsed);
+    let start = ProcessTime::now();
+    let hopper_b = rust_hopper::Hopper::new(set_b_intervals);
+    let elapsed: Duration = start.elapsed();
+    println!("rust-hopper: Time to create set b: {:#?}", elapsed);
+
     // Run A vs A
     let start = ProcessTime::now();
     let mut count = 0;
     for interval in set_a.iter() {
-        count += lapper_a
+        count += hopper_a
             .find(interval.start as usize, interval.stop as usize)
             .count();
     }
     let elapsed: Duration = start.elapsed();
     println!(
-        "rust-lapper: 100% hit rate A vs A time/count: {:#?}/{}",
+        "rust-hopper: 100% hit rate A vs A time/count: {:#?}/{}",
         elapsed, count
     );
 
@@ -224,13 +308,66 @@ fn run_rust_lapper(set_a: &Vec<Iv>, set_b: &Vec<Iv>) {
     let start = ProcessTime::now();
     let mut count = 0;
     for interval in set_a.iter() {
-        count += lapper_b
+        count += hopper_b
             .find(interval.start as usize, interval.stop as usize)
             .count();
     }
     let elapsed: Duration = start.elapsed();
     println!(
-        "rust-lapper: < 100% hit rate A vs B time/count: {:#?}/{}",
+        "rust-hopper: < 100% hit rate A vs B time/count: {:#?}/{}",
+        elapsed, count
+    );
+}
+
+fn run_iproxy(set_a: &Vec<Iv>, set_b: &Vec<Iv>) {
+    println!("IProxy");
+    let set_a_intervals = set_a
+        .iter()
+        .map(|i| iproxy::Interval {
+            start: i.start,
+            stop: i.stop,
+            val: 0,
+        })
+        .collect();
+    let set_b_intervals = set_b
+        .iter()
+        .map(|i| iproxy::Interval {
+            start: i.start,
+            stop: i.stop,
+            val: 0,
+        })
+        .collect();
+    // Object Creation
+    let start = ProcessTime::now();
+    let iproxy_a = iproxy::IProxy::new(set_a_intervals);
+    let elapsed: Duration = start.elapsed();
+    println!("IProxy: Time to create set a: {:#?}", elapsed);
+    let start = ProcessTime::now();
+    let iproxy_b = iproxy::IProxy::new(set_b_intervals);
+    let elapsed: Duration = start.elapsed();
+    println!("IProxy: Time to create set b: {:#?}", elapsed);
+
+    // Run A vs A
+    let start = ProcessTime::now();
+    let mut count = 0;
+    for interval in set_a.iter() {
+        count += iproxy_a.find(interval.start, interval.stop).count();
+    }
+    let elapsed: Duration = start.elapsed();
+    println!(
+        "IProxy: 100% hit rate A vs A time/count: {:#?}/{}",
+        elapsed, count
+    );
+
+    // Run A vs B
+    let start = ProcessTime::now();
+    let mut count = 0;
+    for interval in set_a.iter() {
+        count += iproxy_b.find(interval.start, interval.stop).count();
+    }
+    let elapsed: Duration = start.elapsed();
+    println!(
+        "IProxy: < 100% hit rate A vs B time/count: {:#?}/{}",
         elapsed, count
     );
 }
@@ -239,37 +376,27 @@ fn run_ailist(set_a: &Vec<Iv>, set_b: &Vec<Iv>) {
     println!("AIList");
     let set_a_intervals = set_a
         .iter()
-        .map(|i| {
-            (
-                ailist::Interval {
-                    start: i.start,
-                    stop: i.stop,
-                    max_end: 0,
-                },
-                0,
-            )
+        .map(|i| ailist::Interval {
+            start: i.start,
+            end: i.stop,
+            val: 0,
         })
         .collect();
     let set_b_intervals = set_b
         .iter()
-        .map(|i| {
-            (
-                ailist::Interval {
-                    start: i.start,
-                    stop: i.stop,
-                    max_end: 0,
-                },
-                0,
-            )
+        .map(|i| ailist::Interval {
+            start: i.start,
+            end: i.stop,
+            val: 0,
         })
         .collect();
     // Object Creation
     let start = ProcessTime::now();
-    let ailist_a = ailist::AIList::new(set_a_intervals, None, None);
+    let ailist_a = ailist::AIList::new(set_a_intervals, None);
     let elapsed: Duration = start.elapsed();
     println!("AIList: Time to create set a: {:#?}", elapsed);
     let start = ProcessTime::now();
-    let ailist_b = ailist::AIList::new(set_b_intervals, None, None);
+    let ailist_b = ailist::AIList::new(set_b_intervals, None);
     let elapsed: Duration = start.elapsed();
     println!("AIList: Time to create set b: {:#?}", elapsed);
 

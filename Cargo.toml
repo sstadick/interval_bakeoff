@@ -12,6 +12,9 @@ cpu-time = "0.1.0"
 nested_intervals = {path = "../nested_intervals"}
 #nested_intervals = "0.2.0"
 bio = "0.28.2"
-ailist = {path = "../AIList"}
+iproxy = {path = "../iproxy"}
+scailist = {path = "../ScAIList"}
 coitree = {path = "../coitree"}
-rust-lapper = "0.3.9"
+rust-hopper = {path = "../rust-hopper"}
+#rust-lapper = "0.3.9"
+rust-lapper = {path = "../rust-lapper"}
